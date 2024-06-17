@@ -1,17 +1,11 @@
-import inquirer from "inquirer";
-import { input, checkbox } from "@inquirer/prompts";
+import { input, checkbox, confirm } from "@inquirer/prompts";
 import fs from "fs";
-// import path from "path.js";
 
-const questions = [
-  {
-    type: "input",
-    name: "pokemon",
-    message: "What pokemon would you like to search for?",
-  },
-  {
-    type: "checkbox",
-    name: "content",
+const getPokemon = async () => {
+  const pokemon = await input({
+    message: "What Pokemon would you like to search for?",
+  });
+  const content = await checkbox({
     message: "What would you like to download? Stats, Sprites, Artwork?",
     choices: [
       { name: "Stats", value: "stats" },
@@ -21,32 +15,11 @@ const questions = [
       },
       { name: "Artwork", value: "artwork" },
     ],
-  },
-];
-const getAnswers = async () => {
-  inquirer.prompt(questions).then((answers) => {
-    const pokemon = answers.pokemon;
-    const content = answers.content;
-    return [pokemon, content];
   });
-};
-
-const getPokemon = async () => {
-  const [pokemon, content] = await getAnswers();
-  //   const pokemon = await input({
-  //     message: "What pokemon would you like to search for?",
-  //   });
-  //   const content = await checkbox({
-  //     message: "What would you like to download? Stats, Sprites, Artwork?",
-  //     choices: [
-  //       { name: "Stats", value: "stats" },
-  //       {
-  //         name: "Sprites",
-  //         value: "sprites",
-  //       },
-  //       { name: "Artwork", value: "artwork" },
-  //     ],
-  //   });
+  const isFinished = await confirm({
+    message: "Would you like to search for another Pokemon?",
+    default: false,
+  });
   const directoryPath = `./${pokemon}`;
   if (!fs.existsSync(directoryPath)) {
     fs.mkdirSync(directoryPath);
@@ -57,8 +30,43 @@ const getPokemon = async () => {
       const stats = json.stats;
       const sprites = json.sprites;
       const artwork = json.sprites["other"]["official-artwork"];
-      for (const [key, value] of sprites) {
+      if (content.includes("sprites")) {
+        for (const [key, value] of Object.entries(sprites)) {
+          if (typeof value === "string") {
+            fetch(`${value}`)
+              .then((image) => image.arrayBuffer())
+              .then((result) => {
+                const buffer = Buffer.from(result);
+                fs.writeFileSync(`${directoryPath}/${key}.png`, buffer);
+                console.log(`Sprites saved to ${directoryPath}/${key}.png`);
+              });
+          }
+        }
+      }
+      if (content.includes("artwork")) {
+        fetch(json.sprites["other"]["official-artwork"]["front_default"])
+          .then((response) => response.arrayBuffer())
+          .then((result) => {
+            const artBuffer = Buffer.from(result);
+            fs.writeFileSync(
+              `${directoryPath}/official-artwork.png`,
+              artBuffer
+            );
+            console.log(
+              `Artwork saved to ${directoryPath}/official-artwork.png`
+            );
+          });
+      }
+      if (content.includes("stats")) {
+        const statsText = stats
+          .map((stat) => `${stat.stat.name}: ${stat.base_stat}`)
+          .join("\n");
+        fs.writeFileSync(`${directoryPath}/stats.txt`, statsText);
+        console.log(`Stats saved to ${directoryPath}/stats.txt`);
       }
     });
+  if (isFinished === true) {
+    getPokemon();
+  }
 };
 getPokemon();
