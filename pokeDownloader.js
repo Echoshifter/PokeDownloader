@@ -6,7 +6,7 @@ const getPokemon = async () => {
     message: "What Pokemon would you like to search for?",
   });
   const content = await checkbox({
-    message: "What would you like to download? Stats, Sprites, Artwork?",
+    message: "What would you like to download?",
     choices: [
       { name: "Stats", value: "stats" },
       {
@@ -69,4 +69,3 @@ const getPokemon = async () => {
     getPokemon();
   }
 };
-getPokemon();
